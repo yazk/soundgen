@@ -49,7 +49,7 @@ double wav(double time, double freq)
 // linear loop percent
 double fade(double intervalPercent)
 {
-	return exp(-intervalPercent * 2.7);
+	return exp(-pow(intervalPercent, 4.0) * 7.);
 }
 
 double linShepard(double time)
@@ -89,18 +89,19 @@ double expShepard(double time, double f1, double f2, double sweepTime)
 	//sound += 0.125 * chirp(orgtime, f * 128, f * 256, sweepTime);
 	
 	time = fmod(time, sweepTime);
+	double intervalPercent = time / sweepTime;
 
 	// new method, double sweepTime, use same freq range
-	// better because there is no continuity issue between intervals
+	// better because there is no continuity issue (phase) between intervals
 #define NUM_OCTAVES 8
-	sound += chirp(time + sweepTime * 0., f1, f2, sweepTime);
+	sound += (1- fade(intervalPercent)) *chirp(time + sweepTime * 0., f1, f2, sweepTime);
 	sound += chirp(time + sweepTime * 1., f1, f2, sweepTime);
 	sound += chirp(time + sweepTime * 2., f1, f2, sweepTime);
 	sound += chirp(time + sweepTime * 3., f1, f2, sweepTime);
 	sound += chirp(time + sweepTime * 4., f1, f2, sweepTime);
 	sound += chirp(time + sweepTime * 5., f1, f2, sweepTime);
 	sound += chirp(time + sweepTime * 6., f1, f2, sweepTime);
-	sound += chirp(time + sweepTime * 7., f1, f2, sweepTime);
+	sound += fade(intervalPercent) * chirp(time + sweepTime * 7., f1, f2, sweepTime);
 
 	sound *= 1. / NUM_OCTAVES;
 
@@ -165,7 +166,7 @@ int main()
 
 	while (curTime < totalTime)
 	{
-		wav[curSample] = expShepard(curTime, 27.5, 55, 7.0);
+		wav[curSample] = expShepard(curTime, 27.5, 55, 15.0);
 		//wav[curSample] = expShepard_wikipedia(curTime);
 
 		curTime = ++curSample / SAMPLE_RATE;
