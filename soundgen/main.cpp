@@ -1,6 +1,5 @@
 // main.cpp
 // Author: Yaz Khabiri
-// 
 
 #define _USE_MATH_DEFINES
 
@@ -75,11 +74,9 @@ double linShepard(double time)
 	return (sound);
 }
 
-double expShepard(double time)
+double expShepard(double time, double f1, double f2, double sweepTime)
 {
 	double sound = 0.0;
-	double sweepTime = 2.0;
-	const double f = 27.5;
 
 	// old method, doubling frequency, time = time % sweepTime
 	//sound += 0.125 * chirp(orgtime, f * 1,   f * 2,   sweepTime);
@@ -90,19 +87,62 @@ double expShepard(double time)
 	//sound += 0.125 * chirp(orgtime, f * 32,  f * 64,  sweepTime);
 	//sound += 0.125 * chirp(orgtime, f * 64,  f * 128, sweepTime);
 	//sound += 0.125 * chirp(orgtime, f * 128, f * 256, sweepTime);
-
 	
+	time = fmod(time, sweepTime);
+
 	// new method, double sweepTime, use same freq range
-	sound += 0.125 * chirp(time + sweepTime * 0., f, f*2, sweepTime);
-	sound += 0.125 * chirp(time + sweepTime * 1., f, f*2, sweepTime);
-	sound += 0.125 * chirp(time + sweepTime * 2., f, f*2, sweepTime);
-	sound += 0.125 * chirp(time + sweepTime * 3., f, f*2, sweepTime);
-	sound += 0.125 * chirp(time + sweepTime * 4., f, f*2, sweepTime);
-	sound += 0.125 * chirp(time + sweepTime * 5., f, f*2, sweepTime);
-	sound += 0.125 * chirp(time + sweepTime * 6., f, f*2, sweepTime);
-	sound += 0.125 * chirp(time + sweepTime * 7., f, f*2, sweepTime);
+	// better because there is no continuity issue between intervals
+#define NUM_OCTAVES 8
+	sound += chirp(time + sweepTime * 0., f1, f2, sweepTime);
+	sound += chirp(time + sweepTime * 1., f1, f2, sweepTime);
+	sound += chirp(time + sweepTime * 2., f1, f2, sweepTime);
+	sound += chirp(time + sweepTime * 3., f1, f2, sweepTime);
+	sound += chirp(time + sweepTime * 4., f1, f2, sweepTime);
+	sound += chirp(time + sweepTime * 5., f1, f2, sweepTime);
+	sound += chirp(time + sweepTime * 6., f1, f2, sweepTime);
+	sound += chirp(time + sweepTime * 7., f1, f2, sweepTime);
+
+	sound *= 1. / NUM_OCTAVES;
 
 	return sound;
+}
+
+// https://en.wikipedia.org/wiki/File:DescenteInfinie.ogg
+#define Period 20.
+#define A0 0.7
+
+float a(float t)
+{
+	return A0 * (1. + cos(PI * t / Period)) / 4.;
+}
+
+float w(float t, float freq)
+{
+	return 2. * PI * freq * 1. / pow(2., t / Period);
+}
+
+float s(float t, float freq)
+{
+	return a(t) * sin(w(t, freq) * t) + a(t + Period) * sin(2. * w(t, freq) * t);
+}
+
+double expShepard_wikipedia(double time)
+{
+	double sound = 0.0;
+
+	sound += s(time, 440.);
+	sound += s(time, 523.25);
+
+	sound += s(time, 440.*2.);
+	sound += s(time, 523.25*2.);
+
+	sound += s(time, 440.*4.);
+	sound += s(time, 523.25*4.);
+
+	sound += s(time, 440.*8.);
+	sound += s(time, 523.25*8.);
+
+	return 0.25 * sound;
 }
 
 int main()
@@ -110,21 +150,29 @@ int main()
 	FILE *f;
 	int curSample = 0;
 	double curTime = 0;
-	const double totalTime = 4.0;
+	const double totalTime = 60;
 
 	fopen_s(&f, "shepard.wav", "wb");
 	
+	if (!f)
+	{
+		printf("file faile to open\n");
+		return 0;
+	}
+
 	const int totalSamples = (int)ceil( totalTime * SAMPLE_RATE );
 	double *wav = new double[totalSamples];
 
 	while (curTime < totalTime)
 	{
-		wav[curSample] = expShepard(curTime);
+		wav[curSample] = expShepard(curTime, 27.5, 55, 7.0);
+		//wav[curSample] = expShepard_wikipedia(curTime);
 
 		curTime = ++curSample / SAMPLE_RATE;
 	}
 
 	fwrite(wav, sizeof(double), totalSamples, f);
+
 	fclose(f);
 
 	delete[] wav;
