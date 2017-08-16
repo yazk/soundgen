@@ -72,6 +72,13 @@ double linShepard(double time, double f = 27.5, double sweepTime = 2.0)
 	return sound;
 }
 
+double envelope(double time, double octave)
+{
+	//return 1.0;
+	//return -0.5 * cos(2. * PI * (time + octave) / 8.) + 0.5;
+	return -0.125 * cos(2. * PI * (time + octave) / 8.) + 0.5;
+}
+
 double expShepard(double time, double f1, double f2, double sweepTime)
 {
 	double sound = 0.0;
@@ -87,14 +94,14 @@ double expShepard(double time, double f1, double f2, double sweepTime)
 	// better because there is no continuity issue (phase) between intervals
 	// fade top and bottom frequencies
 #define NUM_OCTAVES 8
-	sound += (1- fade(intervalPercent)) *	expChirp(time + sweepTime * 0., f1, f2, sweepTime);
-	sound +=								expChirp(time + sweepTime * 1., f1, f2, sweepTime);
-	sound +=								expChirp(time + sweepTime * 2., f1, f2, sweepTime);
-	sound +=								expChirp(time + sweepTime * 3., f1, f2, sweepTime);
-	sound +=								expChirp(time + sweepTime * 4., f1, f2, sweepTime);
-	sound +=								expChirp(time + sweepTime * 5., f1, f2, sweepTime);
-	sound +=								expChirp(time + sweepTime * 6., f1, f2, sweepTime);
-	sound += fade(intervalPercent) *		expChirp(time + sweepTime * 7., f1, f2, sweepTime);
+	sound += envelope(intervalPercent, 0) * (1 - fade(intervalPercent)) *	expChirp(time + sweepTime * 0., f1, f2, sweepTime);
+	sound += envelope(intervalPercent, 1) *								expChirp(time + sweepTime * 1., f1, f2, sweepTime);
+	sound += envelope(intervalPercent, 2) *								expChirp(time + sweepTime * 2., f1, f2, sweepTime);
+	sound += envelope(intervalPercent, 3) *								expChirp(time + sweepTime * 3., f1, f2, sweepTime);
+	sound += envelope(intervalPercent, 4) *								expChirp(time + sweepTime * 4., f1, f2, sweepTime);
+	sound += envelope(intervalPercent, 5) *								expChirp(time + sweepTime * 5., f1, f2, sweepTime);
+	sound += envelope(intervalPercent, 6) *								expChirp(time + sweepTime * 6., f1, f2, sweepTime);
+	sound += envelope(intervalPercent, 7) * fade(intervalPercent) *		expChirp(time + sweepTime * 7., f1, f2, sweepTime);
 
 	sound *= 1. / NUM_OCTAVES;
 
@@ -109,20 +116,21 @@ int main()
 	const double totalTime = 60;
 
 	fopen_s(&f, "shepard.wav", "wb");
-	
+
 	if (!f)
 	{
 		printf("file faile to open\n");
 		return 0;
 	}
 
-	const int totalSamples = (int)ceil( totalTime * SAMPLE_RATE );
+	const int totalSamples = (int)ceil(totalTime * SAMPLE_RATE);
 	double *wav = new double[totalSamples];
 
 	while (curTime < totalTime)
 	{
 		wav[curSample] = 0;
 		wav[curSample] += expShepard(curTime, 27.5, 55, 15.0);
+		//wav[curSample] += mainSound(curTime);
 		//wav[curSample] += expShepard(curTime, 29.14, 58.27, 15.0);
 		//wav[curSample] += expShepard(curTime, 30.87, 61.74, 15.0);
 		//wav[curSample] += expShepard(curTime, 32.70, 65.41, 15.0);
